@@ -1,14 +1,28 @@
-from flask import Flask, render_template, request
 import requests
 
-app = Flask(__name__)
-
-# ===== IBM Watson NLU Credentials =====
 API_KEY = "xxx"
 URL = "xxx"
 
 
-def get_emotion(text):
+def emotion_detector(text):
+    """
+    Calls IBM Watson NLU and returns emotion scores.
+    Includes error handling for status code 400 and API failures.
+    """
+
+    # -------------------------
+    # Input validation (Task 7A)
+    # -------------------------
+    if text is None or text.strip() == "":
+        return {
+            "anger": None,
+            "disgust": None,
+            "fear": None,
+            "joy": None,
+            "sadness": None,
+            "error": "400 - Invalid input text"
+        }
+
     endpoint = f"{URL}/v1/analyze?version=2022-04-07"
 
     payload = {
@@ -27,39 +41,43 @@ def get_emotion(text):
             timeout=10
         )
 
+        # -------------------------
+        # Handle HTTP errors
+        # -------------------------
+        if response.status_code != 200:
+            return {
+                "anger": None,
+                "disgust": None,
+                "fear": None,
+                "joy": None,
+                "sadness": None,
+                "error": f"HTTP {response.status_code}",
+                "details": response.text
+            }
+
         data = response.json()
 
-        # If API error
-        if response.status_code != 200:
-            return {"error": data}
+        emotions = data.get("emotion", {}).get("document", {}).get("emotion", {})
 
-        # Extract emotions safely
-        emotions = (
-            data.get("emotion", {})
-                .get("document", {})
-                .get("emotion", {})
-        )
+        return {
+            "anger": emotions.get("anger", 0),
+            "disgust": emotions.get("disgust", 0),
+            "fear": emotions.get("fear", 0),
+            "joy": emotions.get("joy", 0),
+            "sadness": emotions.get("sadness", 0)
+        }
 
-        if not emotions:
-            return {"error": "No emotion detected. Try a longer sentence."}
+    except requests.exceptions.Timeout:
+        return {
+            "error": "Request timeout"
+        }
 
-        return emotions
+    except requests.exceptions.ConnectionError:
+        return {
+            "error": "Connection error"
+        }
 
     except Exception as e:
-        return {"error": str(e)}
-
-
-@app.route("/", methods=["GET", "POST"])
-def index():
-    emotions = None
-    text = ""
-
-    if request.method == "POST":
-        text = request.form.get("text", "")
-        emotions = get_emotion(text)
-
-    return render_template("index.html", emotions=emotions, text=text)
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+        return {
+            "error": str(e)
+        }
