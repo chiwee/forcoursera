@@ -5,21 +5,32 @@
 </head>
 <body>
 
-<h1>Emotion Detection using Watson NLP</h1>
+<h2>Emotion Detection App</h2>
 
-<form method="POST">
-    <textarea name="text" placeholder="Enter text here"></textarea>
-    <button type="submit">Analyze</button>
-</form>
+<textarea id="text" rows="5" cols="50"></textarea><br><br>
 
-{% if emotions %}
-    <h3>Result:</h3>
-    <p>Joy: {{ emotions.joy }}</p>
-    <p>Anger: {{ emotions.anger }}</p>
-    <p>Fear: {{ emotions.fear }}</p>
-    <p>Sadness: {{ emotions.sadness }}</p>
-    <p>Disgust: {{ emotions.disgust }}</p>
-{% endif %}
+<button onclick="detect()">Detect Emotion</button>
+
+<pre id="result"></pre>
+
+<script>
+function detect() {
+    fetch("/detect", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            text: document.getElementById("text").value
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("result").innerText =
+            JSON.stringify(data, null, 2);
+    });
+}
+</script>
 
 </body>
 </html>
